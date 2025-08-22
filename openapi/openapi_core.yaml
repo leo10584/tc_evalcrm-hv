@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: Tatvacare CRM API
+  description: Core API for Tatvacare HealthtechCRM system
+  version: 1.0.0
+servers:
+  - url: '{baseUrl}'
+    variables:
+      baseUrl:
+        default: 'https://api.tatvacare.com'
+        description: API base URL
+paths:
+  /rfps:
+    post:
+      summary: Create RFP
+      operationId: createRFP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRFPRequest'
+      responses:
+        '201':
+          description: RFP created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RFP'
+  /opportunities:
+    post:
+      summary: Create Opportunity
+      operationId: createOpportunity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOpportunityRequest'
+      responses:
+        '201':
+          description: Opportunity created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opportunity'
+  /opportunities/{id}/stage:
+    patch:
+      summary: Update Opportunity Stage
+      operationId: updateOpportunityStage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stage:
+                  type: string
+                  enum: [lead, qualified, proposal, negotiation, closed_won, closed_lost]
+      responses:
+        '200':
+          description: Stage updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Opportunity'
+  /quotes:
+    post:
+      summary: Create Quote
+      operationId: createQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuoteRequest'
+      responses:
+        '201':
+          description: Quote created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+  /quotes/{id}/send:
+    post:
+      summary: Send Quote via Email
+      operationId: sendQuote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientEmail:
+                  type: string
+                  format: email
+                message:
+                  type: string
+      responses:
+        '200':
+          description: Quote sent successfully
+  /quotes/{id}/esign:
+    post:
+      summary: Send Quote for E-Signature
+      operationId: sendQuoteForESign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signerEmail:
+                  type: string
+                  format: email
+                signerName:
+                  type: string
+      responses:
+        '200':
+          description: Quote sent for e-signature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  envelopeId:
+                    type: string
+                  signingUrl:
+                    type: string
+  /esign/webhook:
+    post:
+      summary: E-Sign Webhook
+      operationId: handleESignWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                envelopeId:
+                  type: string
+                status:
+                  type: string
+                  enum: [sent, delivered, signed, completed, declined, voided]
+      responses:
+        '200':
+          description: Webhook processed successfully
+  /email/threads/{entityType}/{entityId}:
+    get:
+      summary: Get Email Thread
+      operationId: getEmailThread
+      parameters:
+        - name: entityType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [opportunity, quote]
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email thread retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmailMessage'
+  /audit:
+    get:
+      summary: Get Audit Log
+      operationId: getAuditLog
+      parameters:
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Audit log retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+                  total:
+                    type: integer
+
+components:
+  schemas:
+    CreateRFPRequest:
+      type: object
+      required:
+        - accountName
+        - summary
+        - scopeItems
+      properties:
+        accountName:
+          type: string
+        summary:
+          type: string
+        scopeItems:
+          type: array
+          items:
+            type: string
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+    
+    RFP:
+      type: object
+      properties:
+        id:
+          type: string
+        accountName:
+          type: string
+        summary:
+          type: string
+        scopeItems:
+          type: array
+          items:
+            type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        opportunityId:
+          type: string
+    
+    CreateOpportunityRequest:
+      type: object
+      required:
+        - name
+        - accountName
+        - stage
+        - value
+      properties:
+        name:
+          type: string
+        accountName:
+          type: string
+        stage:
+          type: string
+          enum: [lead, qualified, proposal, negotiation, closed_won, closed_lost]
+        value:
+          type: number
+        currency:
+          type: string
+          default: INR
+        ownerId:
+          type: string
+        rfpId:
+          type: string
+    
+    Opportunity:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        accountName:
+          type: string
+        stage:
+          type: string
+        value:
+          type: number
+        currency:
+          type: string
+        ownerId:
+          type: string
+        rfpId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    CreateQuoteRequest:
+      type: object
+      required:
+        - opportunityId
+        - lineItems
+        - gstDetails
+      properties:
+        opportunityId:
+          type: string
+        templateId:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineItem'
+        gstDetails:
+          $ref: '#/components/schemas/GSTDetails'
+        approvalRequired:
+          type: boolean
+          default: false
+    
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+        opportunityId:
+          type: string
+        templateId:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineItem'
+        subtotal:
+          type: number
+        gstDetails:
+          $ref: '#/components/schemas/GSTDetails'
+        totalAmount:
+          type: number
+        currency:
+          type: string
+          default: INR
+        status:
+          type: string
+          enum: [draft, sent, signed, expired]
+        approvalStatus:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+        pdfUrl:
+          type: string
+        htmlUrl:
+          type: string
+        envelopeId:
+          type: string
+    
+    LineItem:
+      type: object
+      required:
+        - description
+        - quantity
+        - unitPrice
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        total:
+          type: number
+        taxable:
+          type: boolean
+          default: true
+    
+    GSTDetails:
+      type: object
+      properties:
+        cgst:
+          type: number
+        sgst:
+          type: number
+        igst:
+          type: number
+        totalGst:
+          type: number
+        gstNumber:
+          type: string
+        placeOfSupply:
+          type: string
+    
+    EmailMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        from:
+          type: string
+        to:
+          type: array
+          items:
+            type: string
+        subject:
+          type: string
+        body:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+    
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        action:
+          type: string
+        userId:
+          type: string
+        userEmail:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+        intentId:
+          type: string
